@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drowsiness Detection Pipeline</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #111827; /* bg-gray-900 */
+            color: #d1d5db; /* text-gray-300 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        /* Slide container for aspect ratio and scaling */
+        .slide-container {
+            width: 100%;
+            max-width: 1200px;
+            aspect-ratio: 16 / 9;
+            background-color: #1f2937; /* bg-gray-800 */
+            border-radius: 0.5rem; /* rounded-lg */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-lg */
+            overflow: hidden;
+            position: relative;
+        }
+        /* Individual slide */
+        .slide {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            visibility: hidden;
+            padding: 3rem 4rem; /* p-12 */
+            overflow-y: auto;
+        }
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        /* Slide content base */
+        .slide-content {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Title styles */
+        .slide-title {
+            font-size: 2.25rem; /* text-4xl */
+            font-weight: 700; /* font-bold */
+            color: #ffffff; /* text-white */
+            margin-bottom: 1rem; /* mb-4 */
+            border-bottom: 2px solid #4f46e5; /* border-b-2 border-indigo-600 */
+            padding-bottom: 0.5rem; /* pb-2 */
+        }
+        /* Subtitle or section head */
+        .slide-subtitle {
+            font-size: 1.5rem; /* text-2xl */
+            font-weight: 600; /* font-semibold */
+            color: #e5e7eb; /* text-gray-200 */
+            margin-bottom: 1.5rem; /* mb-6 */
+        }
+        /* Body text */
+        .slide-body p {
+            font-size: 1.125rem; /* text-lg */
+            line-height: 1.75; /* leading-relaxed */
+            margin-bottom: 1rem; /* mb-4 */
+        }
+        .slide-body ul {
+            font-size: 1.125rem; /* text-lg */
+            line-height: 1.75; /* leading-relaxed */
+            list-style-position: inside;
+            list-style-type: disc;
+            margin-left: 0.5rem; /* ml-2 */
+            margin-bottom: 1rem;
+        }
+        /* Two-column grid for images/text */
+        .two-col-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem; /* gap-6 */
+        }
+        @media (min-width: 768px) {
+            .two-col-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        /* Image wrapper */
+        .img-container {
+            background-color: #374151; /* bg-gray-700 */
+            border-radius: 0.5rem; /* rounded-lg */
+            padding: 1rem; /* p-4 */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); /* shadow-md */
+        }
+        .img-container img {
+            width: 100%;
+            height: auto;
+            max-height: 350px;
+            object-fit: contain;
+            border-radius: 0.25rem; /* rounded */
+        }
+        /* Footer for slide number */
+        .slide-footer {
+            margin-top: auto;
+            padding-top: 1rem; /* pt-4 */
+            text-align: right;
+            font-size: 0.875rem; /* text-sm */
+            color: #6b7280; /* text-gray-500 */
+        }
+        /* Navigation buttons */
+        .nav-buttons {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 1.5rem; /* mt-6 */
+        }
+        .nav-button {
+            background-color: #4f46e5; /* bg-indigo-600 */
+            color: #ffffff; /* text-white */
+            font-weight: 600; /* font-semibold */
+            padding: 0.75rem 1.5rem; /* py-3 px-6 */
+            border-radius: 0.375rem; /* rounded-md */
+            transition: background-color 0.2s;
+            cursor: pointer;
+            border: none;
+            user-select: none;
+        }
+        .nav-button:hover {
+            background-color: #4338ca; /* bg-indigo-700 */
+        }
+        .nav-button:disabled {
+            background-color: #4b5563; /* bg-gray-600 */
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        /* Page number indicator */
+        #page-indicator {
+            font-size: 1.125rem; /* text-lg */
+            font-weight: 500; /* font-medium */
+            color: #e5e7eb; /* text-gray-200 */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Slide Container -->
+    <div class="slide-container">
+
+        <!-- Slide 1: Title Slide -->
+        <div class="slide active">
+            <div class="slide-content" style="justify-content: center; text-align: center;">
+                <h1 style="font-size: 3.75rem; font-weight: 700; color: #ffffff; margin-bottom: 1.5rem;">Drowsiness Detection Pipeline</h1>
+                <p style="font-size: 1.5rem; color: #d1d5db; margin-bottom: 0.5rem;">Group Project 2, Team 2: Heart-rate Monitoring</p>
+                <p style="font-size: 1.25rem; color: #9ca3af;">10.11.2025</p>
+            </div>
+            <div class="slide-footer">Slide 1 / 8</div>
+        </div>
+
+        <!-- Slide 2: Problem Statement & Hypothesis -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="slide-title">Problem Statement & Hypothesis</h2>
+                <div class="slide-body">
+                    <h3 class="slide-subtitle" style="font-size: 1.25rem; margin-bottom: 0.5rem;">Problem Statement</h3>
+                    <p style="font-size: 1rem;">Develop the heart rate sensor pipeline using base heart rate and HRV and build a history context using external factors to resolve ambiguity in sensor data to safely presume fatigue/drowsiness.</p>
+                    
+                    <h3 class="slide-subtitle" style="font-size: 1.25rem; margin-top: 1.5rem; margin-bottom: 0.5rem;">Hypothesis</h3>
+                    <ul style="font-size: 1rem; list-style-type: disc; padding-left: 1.5rem; line-height: 1.6;">
+                        <li>Using LLMs to predict the Karolinska-Sleepiness Scale based on time of day, duration of drive, SD in Lane Position/Speed, and history context can increase reasoning accuracy.</li>
+                        <li>An LLM's accuracy will be higher when provided with a structured history of prior predictions and sensor summaries compared to a stateless LLM.</li>
+                        <li>Summarized historical context will achieve similar or better accuracy than raw full-history prompts while reducing token usage and latency.</li>
+                        <li>Models with conflict/reliability context will recover baseline accuracy faster after simulated sensor dropout compared to stateless LLMs.</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="slide-footer">Slide 2 / 8</div>
+        </div>
+        
+        <!-- Slide 3: Original Data Analysis (Distributions) -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="slide-title">Original Data Analysis: Distributions</h2>
+                <div class="two-col-grid">
+                    <div class="bg-slate-800 p-4 rounded-lg">
+                        <img src="dootdootabm/heart_rate_pipeline_driver_monitoring/Heart_Rate_Pipeline_Driver_Monitoring-61220658b52fa37c136ef14bd7b6c49f13dc4e57/Original_Data_Analysis/numerical_distributions.png" alt="Distribution of Numerical Features" class="h-auto w-full">
+                        <p class="text-center mt-3 text-slate-400 text-sm">Distributions of Numerical Features</p>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-lg">
+                        <img src="dootdootabm/heart_rate_pipeline_driver_monitoring/Heart_Rate_Pipeline_Driver_Monitoring-61220658b52fa37c136ef14bd7b6c49f13dc4e57/Original_Data_Analysis/numerical_boxplots.png" alt="Box Plots of Numerical Features" class="h-auto w-full">
+                        <p class="text-center mt-3 text-slate-400 text-sm">Box Plots of Numerical Features</p>
+                    </div>
+                </div>
+                <ul class="list-disc list-inside mt-4 text-slate-300 px-2">
+                    <li>The `drowsiness` plot confirms three distinct target classes (0, 1, and 2).</li>
+                    <li>PPG signals (`Green`, `Red`, `IR`) show wide, somewhat multi-modal distributions.</li>
+                    <li>`heartRate` is roughly normally distributed but with a long tail and several outliers.</li>
+                </ul>
+            </div>
+            <div class="slide-footer">Slide 3 / 8</div>
+        </div>
+        
+        <!-- Slide 4: Original Data Analysis (Correlations) -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="slide-title">Original Data Analysis: Correlations</h2>
+                <div class="flex flex-col md:flex-row items-center gap-6">
+                    <div class="w-full md:w-1/2 flex-shrink-0">
+                        <div class="bg-slate-800 p-4 rounded-lg">
+                            <img src="dootdootabm/heart_rate_pipeline_driver_monitoring/Heart_Rate_Pipeline_Driver_Monitoring-61220658b52fa37c136ef14bd7b6c49f13dc4e57/Original_Data_Analysis/correlation_heatmap.png" alt="Correlation Heatmap" class="h-auto w-full">
+                        </div>
+                    </div>
+                    <div class="w-full md:w-1/2">
+                        <h3 class="slide-subtitle text-xl">Key Findings</h3>
+                        <ul class="list-disc list-inside text-slate-300 space-y-3">
+                            <li>
+                                <strong class="text-white">`heartRate` vs `drowsiness` (-0.68):</strong>
+                                Strongest correlation. This is a key finding, suggesting that as heart rate *decreases*, drowsiness *increases*.
+                            </li>
+                            <li>
+                                <strong class="text-white">`ppgRed` vs `ppgIR` (0.77):</strong>
+                                Very strong positive correlation, as expected since both are infrared/near-infrared light sensors.
+                            </li>
+                             <li>
+                                <strong class="text-white">`ppgRed`/`ppgIR` vs `drowsiness` (-0.39 / -0.41):</strong>
+                                Moderate negative correlation, likely linked to changes in blood volume/flow associated with heart rate.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-footer">Slide 4 / 8</div>
+        </div>
+
+        <!-- Slide 5: PCA Analysis -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="slide-title">PCA Analysis of Engineered HRV Features</h2>
+                <div class="two-col-grid">
+                    <div class="bg-slate-800 p-4 rounded-lg flex flex-col justify-between">
+                        <div>
+                            <img src="dootdootabm/heart_rate_pipeline_driver_monitoring/Heart_Rate_Pipeline_Driver_Monitoring-61220658b52fa37c136ef14bd7b6c49f13dc4e57/HRV_PCA/pca_explained_variance.png" alt="PCA Cumulative Explained Variance" class="h-auto w-full">
+                            <p class="text-center mt-3 text-slate-400 text-sm">PCA Cumulative Explained Variance</p>
+                        </div>
+                         <p class="mt-4 text-slate-300 p-2">
+                            The first component explains 35% of the variance. We need ~25-30 components to capture 95% of the variance, indicating high dimensionality.
+                        </p>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-lg flex flex-col justify-between">
+                        <div>
+                            <img src="dootdootabm/heart_rate_pipeline_driver_monitoring/Heart_Rate_Pipeline_Driver_Monitoring-61220658b52fa37c136ef14bd7b6c49f13dc4e57/HRV_PCA/pca_2d_visualization.png" alt="2D PCA Visualization" class="h-auto w-full">
+                            <p class="text-center mt-3 text-slate-400 text-sm">2D PCA Visualization</p>
+                        </div>
+                         <p class="mt-4 text-slate-300 p-2">
+                           Visualizing the first two components shows some clustering, but the classes (0.0, 1.0, 2.0) are heavily overlapped. This suggests a simple linear model would perform poorly.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-footer">Slide 5 / 8</div>
+        </div>
+        
+        <!-- Slide 6: Model Comparison (Confusion Matrices) -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="slide-title">Model Comparison: Confusion Matrices</h2>
+                <div class="two-col-grid">
+                    <div class="bg-slate-800 p-4 rounded-lg">
+                        <h3 class="text-xl font-semibold text-center text-white mb-3">Random Forest</h3>
+                        <img src="dootdootabm/heart_rate_pipeline_driver_monitoring/Heart_Rate_Pipeline_Driver_Monitoring-61220658b52fa37c136ef14bd7b6c49f13dc4e57/Results_RandomForest/rf_confusion_matrix_heatmap.png" alt="Random Forest Confusion Matrix" class="h-auto w-full">
+                        <ul class="list-disc list-inside mt-4 text-slate-300 px-2">
+                            <li>Strong on Class 0.0 (Alert) and 2.0 (Drowsy).</li>
+                            <li>Struggles with Class 1.0, frequently misclassifying it as 0.0 (9 instances).</li>
+                        </ul>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-lg">
+                        <h3 class="text-xl font-semibold text-center text-white mb-3">XGBoost</h3>
+                        <img src="dootdootabm/heart_rate_pipeline_driver_monitoring/Heart_Rate_Pipeline_Driver_Monitoring-61220658b52fa37c136ef14bd7b6c49f13dc4e57/Results_XGBoost/confusion_matrix_heatmap.png" alt="XGBoost Confusion Matrix" class="h-auto w-full">
+                        <ul class="list-disc list-inside mt-4 text-slate-300 px-2">
+                             <li>Similar struggle with Class 1.0 (11 misclassified as 0.0).</li>
+                             <li>Slightly worse on Class 0.0 but perfect on Class 2.0 in this test set.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-footer">Slide 6 / 8</div>
+        </div>
+
+        <!-- Slide 7: Model Comparison (Feature Importances) -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="slide-title">Model Comparison: Feature Importances</h2>
+                <div class="two-col-grid">
+                    <div class="bg-slate-800 p-4 rounded-lg">
+                        <h3 class="text-xl font-semibold text-center text-white mb-3">Random Forest</h3>
+                        <img src="dootdootabm/heart_rate_pipeline_driver_monitoring/Heart_Rate_Pipeline_Driver_Monitoring-61220658b52fa37c136ef14bd7b6c49f13dc4e57/Results_RandomForest/rf_feature_importances.png" alt="Random Forest Feature Importances" class="h-auto w-full">
+                        <p class="mt-4 text-slate-300 p-2 text-center">
+                            Top features include `HRV_MCVNN`, `HRV_MadNN`, and `HRV_pNN20`.
+                        </p>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-lg">
+                        <h3 class="text-xl font-semibold text-center text-white mb-3">XGBoost</h3>
+                        <img src="dootdootabm/heart_rate_pipeline_driver_monitoring/Heart_Rate_Pipeline_Driver_Monitoring-61220658b52fa37c136ef14bd7b6c49f13dc4e57/Results_XGBoost/xgb_feature_importances.png" alt="XGBoost Feature Importances" class="h-auto w-full">
+                        <p class="mt-4 text-slate-300 p-2 text-center">
+                            `HRV_MadNN` is the most dominant feature by a large margin.
+                        </p>
+                    </div>
+                </div>
+                 <p class="mt-6 text-slate-200 p-2 text-center text-lg">
+                    <strong class="text-white">Key Takeaway:</strong> Both models agree that measures of beat-to-beat variability (like Median Absolute Deviation, `MadNN`) are the strongest predictors of drowsiness.
+                </p>
+            </div>
+            <div class="slide-footer">Slide 7 / 8</div>
+        </div>
+
+        <!-- Slide 8: Engineered Data Analysis -->
+        <div class="slide">
+            <div class="slide-content">
+                <h2 class="slide-title">Engineered Data Analysis (Post-Windowing)</h2>
+                <div class="two-col-grid">
+                    <div class="bg-slate-800 p-4 rounded-lg">
+                        <h3 class="text-xl font-semibold text-center text-white mb-3">Label Distribution (Post-Windowing)</h3>
+                        <img src="dootdootabm/heart_rate_pipeline_driver_monitoring/Heart_Rate_Pipeline_Driver_Monitoring-61220658b52fa37c136ef14bd7b6c49f13dc4e57/Results_XGBoost/label_distribution.png" alt="Engineered Label Distribution" class="h-auto w-full">
+                        <p class="mt-4 text-slate-300 p-2">
+                           The final dataset used for training is imbalanced, with Class 0.0 (Alert) being the most frequent. Class 1.0 and 2.0 (Drowsy) are less frequent.
+                        </p>
+                    </div>
+                    <div class="bg-slate-800 p-4 rounded-lg">
+                        <h3 class="text-xl font-semibold text-center text-white mb-3">Key Feature Distributions</h3>
+                        <img src="dootdootabm/heart_rate_pipeline_driver_monitoring/Heart_Rate_Pipeline_Driver_Monitoring-61220658b52fa37c136ef14bd7b6c49f13dc4e57/Results_XGBoost/key_feature_distributions.png" alt="Engineered Key Feature Distributions" class="h-auto w-full">
+                        <p class="mt-4 text-slate-300 p-2">
+                           Many HRV features are heavily right-skewed (e.g., `HRV_RMSSD`), while others (`HRV_DFA_alpha1`) are more normally distributed. This supports the need for scaling (like StandardScaler used before PCA).
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="slide-footer">Slide 8 / 8</div>
+        </div>
+
+    </div>
+
+    <!-- Navigation -->
+    <div class="nav-buttons">
+        <button id="prev-btn" class="nav-button">← Previous</button>
+        <span id="page-indicator">1 / 8</span>
+        <button id="next-btn" class="nav-button">Next →</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const slides = document.querySelectorAll('.slide');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const pageIndicator = document.getElementById('page-indicator');
+            let currentSlide = 0;
+            const totalSlides = slides.length;
+
+            function showSlide(index) {
+                // Remove active class from all slides
+                slides.forEach((slide) => {
+                    slide.classList.remove('active');
+                });
+                
+                // Add active class to the target slide
+                slides[index].classList.add('active');
+                
+                // Update page indicator
+                pageIndicator.textContent = `${index + 1} / ${totalSlides}`;
+                
+                // Update button states
+                prevBtn.disabled = index === 0;
+                nextBtn.disabled = index === totalSlides - 1;
+            }
+
+            // Next button click
+            nextBtn.addEventListener('click', () => {
+                if (currentSlide < totalSlides - 1) {
+                    currentSlide++;
+                    showSlide(currentSlide);
+                }
+            });
+
+            // Previous button click
+            prevBtn.addEventListener('click', () => {
+                if (currentSlide > 0) {
+                    currentSlide--;
+                    showSlide(currentSlide);
+                }
+            });
+
+            // Keyboard navigation
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'ArrowRight') {
+                    nextBtn.click();
+                } else if (e.key === 'ArrowLeft') {
+                    prevBtn.click();
+                }
+            });
+
+            // Initialize the first slide
+            showSlide(0);
+        });
+    </script>
+</body>
+</html>
