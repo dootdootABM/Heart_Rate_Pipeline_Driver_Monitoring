@@ -29,6 +29,72 @@ CSV_FILE_PATH = r'F:\Users\Aryan\Documents\IAE-M\THI_Notes_Files\Group Project\S
 # WINDOW_SECONDS = 10 
 # ---
 
+# --- [NEW] VISUALIZATION FUNCTIONS FOR ENGINEERED DATA ---
+
+def plot_label_distribution(y):
+    """
+    Plots a count plot of the final labels to check for class balance.
+    """
+    if y is None:
+        print("[WARN] No labels (y) to plot.")
+        return
+        
+    print("\n[INFO] Generating label distribution plot...")
+    plt.figure(figsize=(8, 6))
+    sns.countplot(x=y)
+    plt.title('Distribution of Drowsiness Labels (after windowing)')
+    plt.xlabel('Drowsiness Label')
+    plt.ylabel('Number of Windows')
+    try:
+        plt.savefig('label_distribution.png')
+        print("[INFO] Saved label distribution plot to 'label_distribution.png'")
+    except Exception as e:
+        print(f"[ERROR] Could not save label_distribution.png: {e}")
+    plt.close() # Close plot to save memory
+
+def plot_key_feature_distributions(X):
+    """
+    Plots histograms for a subset of key engineered features.
+    """
+    if X is None:
+        print("[WARN] No features (X) to plot.")
+        return
+
+    print("\n[INFO] Generating key feature distribution plots...")
+    # Select a few key features you've identified as important
+    key_features = [
+        'HRV_RMSSD', 'HRV_SDNN', 'HRV_HF', 'HRV_LFHF', 
+        'HRV_DFA_alpha1', 'HRV_SampEn'
+    ]
+    # Filter to only features that actually exist in the dataframe
+    features_to_plot = [f for f in key_features if f in X.columns]
+    
+    if not features_to_plot:
+        print("[WARN] None of the pre-selected key features were found. Skipping distribution plots.")
+        return
+
+    num_plots = len(features_to_plot)
+    num_cols = 3
+    num_rows = (num_plots + num_cols - 1) // num_cols
+    
+    plt.figure(figsize=(15, 5 * num_rows))
+    for i, feature in enumerate(features_to_plot):
+        plt.subplot(num_rows, num_cols, i + 1)
+        # Use kde=False for a simple histogram, kde=True for a smoothed curve
+        sns.histplot(X[feature], kde=True, bins=30)
+        plt.title(f'Distribution of {feature}')
+    
+    plt.tight_layout()
+    try:
+        plt.savefig('key_feature_distributions.png')
+        print("[INFO] Saved key feature distributions to 'key_feature_distributions.png'")
+    except Exception as e:
+        print(f"[ERROR] Could not save key_feature_distributions.png: {e}")
+    plt.close()
+
+# --- END OF NEW FUNCTIONS ---
+
+
 def train_and_evaluate(X, y):
     """
     Trains an XGBoost classifier and prints evaluation metrics.
@@ -64,30 +130,16 @@ def train_and_evaluate(X, y):
     print(f"        - Testing set size: {X_test.shape[0]} samples")
 
     # --- Initialize and Train the Model (XGBoost) ---
-    # XGBoost is not directly compatible with 'class_weight="balanced"'.
-    # We use 'scale_pos_weight' or calculate 'sample_weight' for binary classification.
-    # For multi-class (like 0, 1, 2), we focus on common parameters:
-    
-    # max_depth: Max depth of a tree.
-    # learning_rate (eta): Step size shrinkage to prevent overfitting.
-    # n_estimators: Number of boosting rounds (trees).
-    # objective: 'multi:softmax' for multi-class classification, or 'binary:logistic' for binary.
-    
-    # Since y contains unique_classes [0, 1, 2], we use 'multi:softmax'
     num_classes = len(unique_classes)
     
     if num_classes > 2:
         xgb_objective = 'multi:softmax'
-        # XGBoost requires num_class parameter for multi-class objective
         xgb_params = {'num_class': num_classes}
         print(f"[INFO] Using multi-class objective: {xgb_objective}")
     else: # Binary classification (0 and 1)
         xgb_objective = 'binary:logistic'
         xgb_params = {}
         print(f"[INFO] Using binary objective: {xgb_objective}")
-        # To emulate Random Forest's 'balanced' weight, you could calculate scale_pos_weight
-        # scale_pos_weight = (count of negative examples) / (count of positive examples)
-        # However, for simplicity and a direct conversion, we'll omit it for now.
     
     model = XGBClassifier(
         n_estimators=100,
@@ -99,8 +151,6 @@ def train_and_evaluate(X, y):
     )
     
     print("[INFO] Training the XGBoost model...")
-    # NOTE: XGBoost often works best with numerical labels starting from 0.
-    # Your code already seems to handle this with unique_classes [0, 1, 2].
     model.fit(X_train, y_train)
     print("[INFO] Model training complete.")
 
@@ -115,10 +165,24 @@ def train_and_evaluate(X, y):
     cm = confusion_matrix(y_test, y_pred, labels=unique_classes)
     cm_df = pd.DataFrame(cm, index=[f"True {c}" for c in unique_classes], columns=[f"Pred {c}" for c in unique_classes])
     print(cm_df)
+    
+    # --- [NEW] Plot Confusion Matrix Heatmap ---
+    print("\n[INFO] Generating confusion matrix heatmap...")
+    plt.figure(figsize=(10, 7))
+    sns.heatmap(cm_df, annot=True, fmt='d', cmap='Blues')
+    plt.title('Confusion Matrix Heatmap')
+    plt.ylabel('Actual Label')
+    plt.xlabel('Predicted Label')
+    try:
+        plt.savefig('confusion_matrix_heatmap.png')
+        print("[INFO] Saved confusion matrix heatmap to 'confusion_matrix_heatmap.png'")
+    except Exception as e:
+        print(f"[ERROR] Could not save confusion_matrix_heatmap.png: {e}")
+    plt.close()
+    # --- End of new plot ---
 
     # --- 3. Feature Importance ---
     print("\n--- 3. Top 10 Most Important Features (Gain) ---")
-    # XGBoost default is 'gain', which is highly effective
     importances = model.feature_importances_
     feature_names = X.columns
     
@@ -134,8 +198,12 @@ def train_and_evaluate(X, y):
     sns.barplot(x='importance', y='feature', data=feature_importance_df.head(20))
     plt.title('Top 20 XGBoost Feature Importances (Gain)')
     plt.tight_layout()
-    plt.savefig('xgb_feature_importances.png')
-    print("\n[INFO] Saved feature importance plot to 'xgb_feature_importances.png'")
+    try:
+        plt.savefig('xgb_feature_importances.png')
+        print("\n[INFO] Saved feature importance plot to 'xgb_feature_importances.png'")
+    except Exception as e:
+        print(f"\n[ERROR] Could not save xgb_feature_importances.png: {e}")
+    plt.close()
 
 
 # --- Main execution block ---
@@ -151,6 +219,12 @@ if __name__ == "__main__":
     if raw_data_df is not None:
         X_features, y_labels = engineer_features(raw_data_df)
         
+        # --- [NEW] Step 2.5: Visualize Engineered Data ---
+        if X_features is not None and y_labels is not None:
+            print("\n--- Starting Engineered Data Visualization ---")
+            plot_label_distribution(y_labels)
+            plot_key_feature_distributions(X_features)
+        
         # --- Step 3: Train Model ---
         if X_features is not None and y_labels is not None:
             train_and_evaluate(X_features, y_labels)
@@ -160,5 +234,5 @@ if __name__ == "__main__":
         print("\n[FAILURE] Data loading failed. Cannot continue pipeline.")
     
     print("\n==============================================")
-    print("     Drowsiness Prediction Pipeline: END      ")
+    print("     DrowsDiness Prediction Pipeline: END      ")
     print("==============================================")
