@@ -76,7 +76,7 @@ We trained two powerful tree-based models on the engineered HRV features.
 
 ### Random Forest
 
-* **Performance:** The confusion matrix shows that Random Forest is very effective at identifying Class 0.0 (Alert) and Class 2.0 (Very Drowsy). However, it struggles with the intermediate Class 1.0, frequently misclassifying it as 0.0 (Alert).
+* **Performance:** The confusion matrix shows that Random Forest is very effective at identifying Class 0.0 (Alert) and Class 2.0 (Very Drowsy). However, it struggles with the intermediate Class 1.0, frequently misclassifying it as 0.0 (Alert). **84% Accuracy**
 * **Key Features:** The most important features for this model are `HRV_MCVNN`, `HRV_MadNN`, and `HRV_pNN20`—all metrics related to the variability and spread of heartbeats.
 
 ![Random Forest Confusion Matrix](Results_RandomForest\rf_confusion_matrix_heatmap.png)
@@ -84,12 +84,12 @@ We trained two powerful tree-based models on the engineered HRV features.
 
 ### XGBoost (Extreme Gradient Boosting)
 
-* **Performance:** XGBoost shows a very similar pattern. It also struggles with Class 1.0, misclassifying 11 instances as 0.0. In this specific test set, it achieved perfect classification for Class 2.0.
+* **Performance:** XGBoost shows a very similar pattern. It also struggles with Class 1.0, misclassifying 11 instances as 0.0. In this specific test set, it achieved perfect classification for Class 2.0. **86% Accuracy**
 * **Key Features:** XGBoost overwhelmingly agrees with Random Forest. The `HRV_MadNN` (Median Absolute Deviation of NN intervals) is by far the most dominant feature for prediction. Other variability metrics like `HRV_SDNNi1` and `HRV_pNN20` are also ranked highly.
 
 ![XGBoost Confusion Matrix](Results_XGBoost\confusion_matrix_heatmap.png)
 ![XGBoost Feature Importances](Results_XGBoost\xgb_feature_importances.png)
-
+![XGBoost Feature Importances](Screenshot_2025-11-11_104841.png)
 ---
 
 ## 6. Conclusion
