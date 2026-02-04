@@ -23,7 +23,7 @@ File
 Description
 1. `main.py`: Loads raw data and generates exploratory data analysis (EDA) graphs (histograms, box plots, etc.); Processes signals, extracts HRV features, performs principal component analysis and outputs a new CSV file for training.
 2. `train_rf_combined` : Trains on the dataset using Random Forest with most important features after reducing dimensionality. Outputs all result infomatics.
-3. `train_xg_combined.py`: Sames as previous script but with XGBoost
+3. `train_xg_combined.py`: Same as previous script but with XGBoost
 4. `heartratenode.py`: Reference python script using in https://github.com/dootdootABM/drowsiness_detection_ros2.git as a ROS2 node for the heart rate pipeline for data collection
 
 ### 5. Project Agenda & Roadmap
